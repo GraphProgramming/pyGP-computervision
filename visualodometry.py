@@ -1,9 +1,13 @@
 import cv2
 import numpy as np
+from typing import Callable
+from gpm.pyGP.registry import register
+NODES = {}
+
 
 lk_params = dict(winSize  = (21, 21), 
-				#maxLevel = 3,
-             	criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.01))
+		#maxLevel = 3,
+    criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.01))
 
 
 def featureTracking(image_ref, image_cur, px_ref):
@@ -14,7 +18,7 @@ def featureTracking(image_ref, image_cur, px_ref):
     kp2 = kp2[st == 1]
 
     return kp1, kp2
-  
+
 class NodeData(object):
     def __init__(self):
         self.cam = None
@@ -27,16 +31,24 @@ class NodeData(object):
         self.kMinNumFeature = 1500
         self.detector = cv2.FastFeatureDetector_create(threshold=25, nonmaxSuppression=True)
 
-def init(node, global_state):
+
+@register(NODES,
+    name="Visual Odometry",
+    inputs=dict(img="Image", cam="Camera"),
+    outputs=dict(odom="Pose"))
+def init(node, global_state) -> Callable:
+    """
+    Calculates the visual odometry. Output is a global pose.
+    """
     node["buffer_size"] = 1
     node["buffer_policy"] = "keep"
     
     node["data"] = NodeData()
     
-    def tick(value):
+    def tick(img, cam):
         data = node["data"]
-        data.new_frame = value["img"]
-        data.cam = value["cam"]
+        data.new_frame = img
+        data.cam = cam
         focal = data.cam.fx
         pp = (data.cam.cx, data.cam.cy)
         
@@ -61,12 +73,4 @@ def init(node, global_state):
           data.px_ref = data.px_cur
         data.last_frame = data.new_frame
         return {"odom": (data.cur_R, data.cur_t)}
-
-    node["tick"] = tick
-
-def spec(node):
-    node["name"] = "Visual Odometry"
-    node["inputs"]["img"] = "Image"
-    node["inputs"]["cam"] = "Camera"
-    node["outputs"]["odom"] = "Pose"
-    node["desc"] = "Calculates the visual odometry. Output is a global pose."
+    return tick

@@ -1,13 +1,15 @@
-def init(node, global_state):
-    def tick(value):
-        return {}
+from typing import Callable
+from gpm.pyGP.registry import register
+NODES = {}
 
-    node["tick"] = tick
-
-def spec(node):
-    node["name"] = "Depth Estimation"
-    node["inputs"]["img1"] = "Image"
-    node["inputs"]["img2"] = "Image"
-    node["inputs"]["pose"] = "Pose"
-    node["outputs"]["depth"] = "Image"
-    node["desc"] = "Calculate a depth image given two images and their relative pose to each other."
+@register(NODES,
+    name="Depth Estimation",
+    inputs=dict(img1="Image", img2="Image", pose="Pose"),
+    outputs=dict(depth="Image"))
+def init(node, global_state) -> Callable:
+    """
+    Calculate a depth image given two images and their relative pose to each other.
+    """
+    def tick(img1, img2, pose):
+        return {"depth": None}
+    return tick

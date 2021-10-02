@@ -1,18 +1,26 @@
 import cv2
+from typing import Callable
+from gpm.pyGP.registry import register
+NODES = {}
 
-def init(node, global_state):
+@register(NODES,
+    name="Undistort",
+    inputs=dict(cam="Camera", img="Image"),
+    outputs=dict(img="Image"))
+def init(node, global_state, alpha=1) -> Callable:
+    """
+    Does stuff.
+    """
     node["buffer_size"] = 1
     node["buffer_policy"] = "keep"
     
-    def tick(value):
-        img = value["img"]
-        cam = value["cam"]
+    def tick(img, cam):
         
         if cam.mtx is None or cam.dist is None:
             return {"img": img}
         
         h, w = img.shape[:2]
-        newcameramtx, roi = cv2.getOptimalNewCameraMatrix(cam.mtx, cam.dist, (w,h), node["args"]["alpha"], (w,h))
+        newcameramtx, roi = cv2.getOptimalNewCameraMatrix(cam.mtx, cam.dist, (w,h), alpha, (w,h))
         
         dst = cv2.undistort(img, cam.mtx, cam.dist, None, newcameramtx)
         
@@ -20,13 +28,4 @@ def init(node, global_state):
         dst = dst[y:y + h, x:x + h]
         
         return {"img": dst}
-
-    node["tick"] = tick
-
-def spec(node):
-    node["name"] = "Undistort"
-    node["inputs"]["cam"] = "Camera"
-    node["inputs"]["img"] = "Image"
-    node["outputs"]["img"] = "Image"
-    node["args"]["alpha"] = 1
-    node["desc"] = "Does stuff"
+    return tick

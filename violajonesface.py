@@ -1,17 +1,21 @@
 import cv2
+from typing import Callable
+from gpm.pyGP.registry import register
+NODES = {}
 
-def init(node, global_state):
+@register(NODES,
+    name="Viola Jones Faces",
+    inputs=dict(img="Image"),
+    outputs=dict(img="Image"))
+def init(node, global_state, width=320, height=240) -> Callable:
+    """
+    Face decetor using viola jones.
+    """
     face_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
     eye_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_eye.xml')
 
-    def tick(value):
-        img = value["img"].copy()
-        width = node["args"]["width"]
-        height = node["args"]["height"]
-        if width == 0:
-            width = 320
-        if height == 0:
-            height = int(width * 3 / 4)
+    def tick(img):
+        img = img.copy()
         img = cv2.resize(img, (width, height), 0, 0, cv2.INTER_CUBIC)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -23,14 +27,5 @@ def init(node, global_state):
             #eyes = eye_cascade.detectMultiScale(roi_gray)
             #for (ex,ey,ew,eh) in eyes:
             #    cv2.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0),2)
-        return {"result": img}
-
-    node["tick"] = tick
-
-def spec(node):
-    node["name"] = "Viola Jones Faces"
-    node["inputs"]["img"] = "Image"
-    node["outputs"]["result"] = "Image"
-    node["args"]["width"] = 0
-    node["args"]["height"] = 0
-    node["desc"] = "Face detector using viola jones."
+        return {"img": img}
+    return tick
